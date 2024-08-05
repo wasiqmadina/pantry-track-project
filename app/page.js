@@ -31,18 +31,33 @@ export default function Home() {
     setInventory(inventoryList)
   }
 
-  const addItem = async () => {
-    const docRef = doc(collection(firestore, 'inventory'), itemName)
-    const docSnap = await getDoc(docRef)
-
-    if (docSnap.exists()) {
-      const { quantity } = docSnap.data()
-      await setDoc(docRef, { quantity: quantity + 1, expirationDate }, { merge: true })
-    } else {
-      await setDoc(docRef, { quantity: 1, expirationDate })
+  const addItem = async (itemName) => {
+    if (!itemName.trim()) {
+      console.error('Item name is required');
+      return;
     }
 
-    await updateInventory()
+    const docRef = doc(collection(firestore, 'inventory'), itemName);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const existingData = docSnap.data();
+      const { quantity, expirationDate: existingExpirationDate } = existingData;
+
+      // Update quantity while keeping the existing expiration date
+      await setDoc(docRef, {
+        quantity: quantity + 1,
+        expirationDate: existingExpirationDate
+      }, { merge: true });
+    } else {
+      // If the item does not exist, create it with the provided expiration date
+      await setDoc(docRef, {
+        quantity: 1,
+        expirationDate
+      });
+    }
+
+    await updateInventory();
   }
 
   const removeItem = async (item) => {
@@ -122,18 +137,20 @@ export default function Home() {
               variant="outlined"
               sx={{ 
                 backgroundColor: '#944E63', 
-                color: '#fff', // Text color
-                borderColor: '#fff', // Border color
-                border: '1px solid', // Border width
+                color: '#fff',
+                borderColor: '#fff', 
+                border: '1px solid', 
                 '&:hover': { 
                   backgroundColor: '#CAA6A6',
-                  borderColor: '#fff', // Ensure border color remains white on hover
+                  borderColor: '#fff', 
                 }  }}
               onClick={() => {
-                addItem()
-                setItemName('')
-                setExpirationDate('')
-                handleClose()
+                if (itemName && expirationDate) {
+                  addItem(itemName) // Pass itemName here
+                  setItemName('')
+                  setExpirationDate('')
+                  handleClose()
+                }
               }}
             >
               Add
@@ -188,7 +205,7 @@ export default function Home() {
                 <Stack direction="row" spacing={2}>
                   <Button
                     variant="contained"
-                    onClick={() => addItem(name)}
+                    onClick={() => addItem(name)} // Ensure itemName is passed here
                     sx={{ backgroundColor: '#944E63', '&:hover': { backgroundColor: '#CAA6A6' } }}
                   >
                     Add
